@@ -1,8 +1,9 @@
 from shannon_fano.shannon_fano_encoder import ShannonFanoEncoder
-from shannon_fano.shannon_fano_decoder import ShannonFanoDecoder
 
-encoded = ShannonFanoEncoder.encode('Helow Wordl!  ' * 5)
-decoded = ShannonFanoDecoder.decode(encoded)
+with open('q.txt', 'rb') as file:
+    content = file.read()
 
-print(encoded.encoded)
-print(decoded.decoded)
+encoded = ShannonFanoEncoder.encode(content, '1.txt')
+
+with open('ar', 'wb') as file:
+    file.write(encoded)
