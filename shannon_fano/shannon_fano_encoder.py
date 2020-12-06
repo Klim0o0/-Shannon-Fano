@@ -17,7 +17,6 @@ class ShannonFanoEncoder:
                 encoding_dictionary) -> bytes:
         encode_data = bytearray()
         encode_data.extend(cls._get_file_path_data(file_path))
-        print(encode_data)
         encode_data.extend(cls._get_dictionary_data(encoding_dictionary))
         encode_data.extend(
             cls._get_encoded_file_data(file_data, encoding_dictionary))
@@ -27,8 +26,7 @@ class ShannonFanoEncoder:
     def _get_encoded_file_data(cls, file_data: bytes,
                                encoding_dictionary) -> bytes:
         encoded_data: bitarray = bitarray()
-        for i in file_data:
-            encoded_data.extend(encoding_dictionary[i])
+        encoded_data.encode(encoding_dictionary, file_data)
         return cls._compite_data(encoded_data.tobytes())
 
     @classmethod
