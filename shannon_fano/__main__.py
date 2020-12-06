@@ -5,7 +5,7 @@ from shannon_fano.shannon_fano_decoder import ShannonFanoDecoder
 with open('f', 'rb') as file:
     content = file.read()
 
-encoded = ShannonFanoEncoder.encode(content, 'rq.txt')
+encoded = ShannonFanoEncoder.encode(content, 'v2.txt')
 
 with open('ar', 'wb') as file:
     file.write(encoded)
@@ -13,9 +13,8 @@ with open('ar', 'wb') as file:
 with open('ar', 'rb') as file:
     content = file.read()
 
-
-
 decode = ShannonFanoDecoder.decode(encoded)
 
-with open(decode[1],'wb') as file:
+with open(decode[1], 'wb') as file:
     file.write(decode[0])
+print('done')

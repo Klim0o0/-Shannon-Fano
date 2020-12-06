@@ -29,7 +29,17 @@ class ShannonFanoDecoder:
                          file_data: bytes):
         bit_file_data = bitarray()
         bit_file_data.frombytes(file_data)
-        return bytes(bit_file_data.decode(encoding_dictionary))
+        decoding_dictionary = {}
+        decode_file_data = bytearray()
+        for i in encoding_dictionary:
+            decoding_dictionary[encoding_dictionary[i].to01()] = i
+        temp = ''
+        for bit in bit_file_data:
+            temp += '1' if bit else '0'
+            if temp in decoding_dictionary.keys():
+                decode_file_data.append(decoding_dictionary[temp])
+                temp = ''
+        return decode_file_data
 
     @classmethod
     def get_encoding_dictionary(cls, encoding_dictionary_data: bytes):
