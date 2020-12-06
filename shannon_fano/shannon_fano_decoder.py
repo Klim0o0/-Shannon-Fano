@@ -9,15 +9,22 @@ class ShannonFanoDecoder:
         index = 0
         data_list: List[bytes] = []
         while index < len(archive_data):
-            data = cls.get_data(archive_data, 0)
-            index = data[1]
+            data = cls.get_data(archive_data, index)
+            index = data[1]+1
             data_list.append(data[0])
+        print(1)
+        for i in data_list:
+            print(i)
         file_path_data = data_list[0]
         decoding_dictionary = cls.get_decoding_dictionary(data_list[1])
 
     @classmethod
     def get_decoding_dictionary(cls, encoding_dictionary_data: bytes):
         encoding_dictionary_bits = bitarray(encoding_dictionary_data)
+        index = 0
+
+        while len(encoding_dictionary_bits) - index > 7:
+            pass
 
 
     @classmethod
