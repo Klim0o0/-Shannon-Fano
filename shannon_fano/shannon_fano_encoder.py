@@ -3,8 +3,10 @@ from typing import Dict
 
 from bitarray import bitarray
 
+from shannon_fano.encoder import Encoder
 
-class ShannonFanoEncoder:
+
+class ShannonFanoEncoder(Encoder):
     @classmethod
     def encode(cls, file_data: bytes, file_path: str) -> bytes:
         encoding_dictionary = cls.get_encoding_dictionary(file_data)

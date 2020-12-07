@@ -1,11 +1,13 @@
 from typing import Tuple, List, Dict
 from bitarray import bitarray
 
+from shannon_fano.decoder import Decoder
 
-class ShannonFanoDecoder:
+
+class ShannonFanoDecoder(Decoder):
 
     @classmethod
-    def decode(cls, archive_data: bytes):
+    def decode(cls, archive_data: bytes) -> Tuple[bytes, str]:
         index = 0
         data_list: List[bytes] = []
         while index < len(archive_data):
