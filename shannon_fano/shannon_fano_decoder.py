@@ -7,17 +7,20 @@ from shannon_fano.decoder import Decoder
 class ShannonFanoDecoder(Decoder):
 
     @classmethod
-    def decode(cls, archive_data: bytes) -> Tuple[bytes, str]:
+    def decode(cls, archive_data: bytes) -> List[Tuple[bytes, str]]:
         index = 0
+        decoded_files: List[Tuple[bytes, str]] = []
         data_list: List[bytes] = []
         while index < len(archive_data):
             data = cls.get_data(archive_data, index)
             index = data[1] + 1
             data_list.append(data[0])
-        file_path = cls.get_file_path(data_list[0])
-        encoding_dictionary = cls.get_encoding_dictionary(data_list[1])
-        file_data = cls.decode_file_data(encoding_dictionary, data_list[2])
-        return file_data, file_path
+        for i in range(0, len(data_list), 3):
+            file_path = cls.get_file_path(data_list[i])
+            encoding_dictionary = cls.get_encoding_dictionary(data_list[i+1])
+            file_data = cls.decode_file_data(encoding_dictionary, data_list[i+2])
+            decoded_files.append((file_data, file_path))
+        return decoded_files
 
     @classmethod
     def get_file_path(cls, file_path_data: bytes):

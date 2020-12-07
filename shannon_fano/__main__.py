@@ -1,11 +1,13 @@
 from pathlib import Path
 
 from bitarray import bitarray
+
+from shannon_fano.decompressor import Decompressor
 from shannon_fano.shannon_fano_encoder import ShannonFanoEncoder
 from shannon_fano.shannon_fano_decoder import ShannonFanoDecoder
-from shannon_fano.compresor import Compressor
+from shannon_fano.compressor import Compressor
 
-with open('TagCloud.exe', 'rb') as file:
+with open('../ar_t/t1.txt', 'rb') as file:
     content = file.read()
 
 encoded = ShannonFanoEncoder.encode(content, '2TagCloud.exe')
@@ -18,12 +20,13 @@ with open('ar', 'rb') as file:
 
 decode = ShannonFanoDecoder.decode(encoded)
 
-with open(decode[1], 'wb') as file:
-    file.write(decode[0])
 print('done')
 comperessor = Compressor(ShannonFanoEncoder())
 encoded = comperessor.compress(
-    [Path('D:\\ЯТП\\Шпора\\Пары\\di\\TagCloud\\bin\\Debug')])
+    [Path('../ar_t')])
 
 with open('s', 'wb') as file:
     file.write(encoded)
+
+decompressor = Decompressor(ShannonFanoDecoder())
+print(decompressor.decompress('s', '.'))

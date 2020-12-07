@@ -14,25 +14,32 @@ class Compressor:
         targets_paths: List[Path] = []
         for target in targets:
             targets_paths.append(Path(target))
-        files_paths: List[Path] = self.collect_files(targets_paths)
-        for file_path in files_paths:
-            with file_path.open('rb') as file:
-                p=file.read()
-                print(p)
-                print(file)
-                encoded_data.extend(
-                    self.encoder.encode(p, str(file_path.parts)))
+        for target_path in targets_paths:
+            for file_path in self.collect_files(target_path):
+                with file_path.open('rb') as file:
+                    p = file.read()
+                    encoded_data.extend(
+                        self.encoder.encode(p,
+                                            self.get_relative_path(target_path,
+                                                                   file_path)))
+
         return encoded_data
 
     @classmethod
-    def collect_files(cls, targets: List[Path]) -> List[Path]:
+    def get_relative_path(cls, path1: Path, path2: Path) -> str:
+        if path1 == path2:
+            return path2.name
+
+        s = ''
+        for item in path2.parts[len(path1.parts) - 1::]:
+            s += '/' + item
+        return s
+
+    @classmethod
+    def collect_files(cls, target: Path) -> List[Path]:
         files: List[Path] = []
         dirs: queue.Queue[Path] = queue.Queue()
-        for target in targets:
-            if target.is_dir():
-                dirs.put(target)
-            else:
-                files.append(target)
+        dirs.put(target)
 
         while not dirs.empty():
             directory = dirs.get()
