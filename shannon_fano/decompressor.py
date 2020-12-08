@@ -10,8 +10,6 @@ class Decompressor:
 
     def decompress(self, archive_path: str, target_dir: str):
         archive = Path(archive_path)
-        if not Path(target_dir).is_dir():
-            return -2
         if not archive.exists():
             return -1
         archive_bytes = archive.read_bytes()
@@ -20,10 +18,9 @@ class Decompressor:
         dirs = []
         for file in files:
             file_path = Path(target_dir+'/'+file[1])
-            print(file_path)
-            for parent in file_path.parents:
-                if not parent.exists():
-                    parent.mkdir()
-
+            parents=file_path.parents
+            for i in range(len(parents)-1,-1,-1):
+                if not parents[i].exists():
+                    parents[i].mkdir()
             file_path.write_bytes(file[0])
         return 0

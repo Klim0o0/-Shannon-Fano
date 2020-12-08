@@ -29,4 +29,4 @@ with open('s', 'wb') as file:
     file.write(encoded)
 
 decompressor = Decompressor(ShannonFanoDecoder())
-print(decompressor.decompress('s', '.'))
+print(decompressor.decompress('s', './secret'))
