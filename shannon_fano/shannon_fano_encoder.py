@@ -2,7 +2,7 @@ import collections
 from typing import Dict
 
 from bitarray import bitarray
-
+from hashlib import md5
 from shannon_fano.encoder import Encoder
 
 
@@ -22,6 +22,7 @@ class ShannonFanoEncoder(Encoder):
         encode_data.extend(cls._get_dictionary_data(encoding_dictionary))
         encode_data.extend(
             cls._get_encoded_file_data(file_data, encoding_dictionary))
+        encode_data.extend(cls._compose_data(md5(file_data).digest()))
         return encode_data
 
     @classmethod
@@ -29,36 +30,46 @@ class ShannonFanoEncoder(Encoder):
                                encoding_dictionary) -> bytes:
         encoded_data: bitarray = bitarray()
         encoded_data.encode(encoding_dictionary, file_data)
-        return cls._compite_data(encoded_data.tobytes())
+        encoded_data_bytes = bytearray(encoded_data.tobytes())
+
+        empty_bits_count = 8 - len(encoded_data) % 8
+        if empty_bits_count == 8:
+            empty_bits_count = 0
+
+        encoded_data_bytes.append(empty_bits_count)
+        return cls._compose_data(bytes(encoded_data_bytes))
 
     @classmethod
     def _get_file_path_data(cls, file_path) -> bytes:
-        return cls._compite_data(bytes(file_path, 'utf-8'))
+        return cls._compose_data(bytes(file_path, 'utf-8'))
 
     @classmethod
-    def _compite_data(cls, data: bytes):
-        complited_data = bytearray()
+    def _compose_data(cls, data: bytes):
+        composed_data = bytearray()
         data_unit = bytearray()
-        for i in data:
-            data_unit.append(i)
+        for byte in data:
+            data_unit.append(byte)
             if len(data_unit) == 255:
-                complited_data.append(255)
-                complited_data.extend(data_unit)
-                data_unit = bytearray()
+                composed_data.append(255)
+                composed_data.extend(data_unit)
+                data_unit.clear()
+
         if len(data_unit) != 0:
-            complited_data.append(len(data_unit))
-            complited_data.extend(data_unit)
-            complited_data.append(0)
-        return complited_data
+            composed_data.append(len(data_unit))
+            composed_data.extend(data_unit)
+        composed_data.append(0)
+        return composed_data
 
     @classmethod
     def _get_dictionary_data(cls, encoding_dictionary: [int, bitarray]):
         encoding_dictionary_data: bitarray = bitarray()
+
         for key in encoding_dictionary.keys():
             code = encoding_dictionary[key]
             encoding_dictionary_data.frombytes(bytes([key, len(code)]))
             encoding_dictionary_data.extend(code)
-        return cls._compite_data(encoding_dictionary_data.tobytes())
+
+        return cls._compose_data(encoding_dictionary_data.tobytes())
 
     @classmethod
     def get_encoding_dictionary(cls, file_data: bytes) -> Dict[int, bitarray]:
@@ -68,36 +79,50 @@ class ShannonFanoEncoder(Encoder):
         symbols.sort(key=lambda s: frequency[s])
         symbols.reverse()
         encoding_dictionary: Dict[int, bitarray] = {}
-        cls.get_d(frequency,
-                  symbols,
-                  0,
-                  len(symbols) - 1,
-                  '',
-                  encoding_dictionary,
-                  len(file_data))
+
+        cls.fill_encoding_dictionary(frequency,
+                                     symbols,
+                                     0,
+                                     len(symbols) - 1,
+                                     '',
+                                     encoding_dictionary,
+                                     len(file_data))
         return encoding_dictionary
 
     @classmethod
-    def get_d(cls, frequency, symbols, start: int, end: int, code: str,
-              d: Dict[int, bitarray], t):
+    def fill_encoding_dictionary(cls,
+                                 frequency,
+                                 symbols,
+                                 start: int,
+                                 end: int,
+                                 code: str,
+                                 encoding_dictionary: Dict[int, bitarray],
+                                 length):
+
         if start >= len(symbols):
             return
+
         if start == end + 1:
-            d[symbols[start]] = bitarray(code + '1')
-            d[symbols[start + 1]] = bitarray(code + '0')
+            encoding_dictionary[symbols[start]] = bitarray(code + '1')
+            encoding_dictionary[symbols[start + 1]] = bitarray(code + '0')
             return
 
         if start == end:
-            d[symbols[start]] = bitarray(code)
+            encoding_dictionary[symbols[start]] = bitarray(code)
             return
 
-        f = 0
+        current_frequency = 0
         for i in range(start, end):
-            f += frequency[symbols[i]]
-            if f < int(t / 2 + 0.5):
+            current_frequency += frequency[symbols[i]]
+            if current_frequency < int(length / 2 + 0.5):
                 continue
-            cls.get_d(frequency, symbols, start, i, code + '1', d, f)
-            cls.get_d(frequency, symbols, i + 1, end, code + '0', d, t - f)
+
+            cls.fill_encoding_dictionary(frequency, symbols, start, i,
+                                         code + '1', encoding_dictionary,
+                                         current_frequency)
+            cls.fill_encoding_dictionary(frequency, symbols, i + 1, end,
+                                         code + '0', encoding_dictionary,
+                                         length - current_frequency)
             break
 
     @classmethod

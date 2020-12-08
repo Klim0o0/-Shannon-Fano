@@ -9,29 +9,31 @@ class Compressor:
     def __init__(self, encoder: Encoder):
         self.encoder: Encoder = encoder
 
-    def compress(self, targets: List[str]):
+    def compress(self, targets: List[str], archive_name: str):
+        archive_name += '.sf'
         encoded_data = bytearray()
         targets_paths: List[Path] = []
+
         for target in targets:
             targets_paths.append(Path(target))
+
         for target_path in targets_paths:
             for file_path in self.collect_files(target_path):
-                with file_path.open('rb') as file:
-                    p = file.read()
-                    encoded_data.extend(
-                        self.encoder.encode(p,
-                                            self.get_relative_path(target_path,
-                                                                   file_path)))
+                encoded_data.extend(
+                    self.encoder.encode(file_path.read_bytes(),
+                                        self.get_relative_path(target_path,
+                                                               file_path)))
 
-        return encoded_data
+        archive_path = Path(archive_name)
+        archive_path.write_bytes(encoded_data)
 
     @classmethod
-    def get_relative_path(cls, path1: Path, path2: Path) -> str:
-        if path1 == path2:
-            return path2.name
+    def get_relative_path(cls, folder_path: Path, file_path: Path) -> str:
+        if folder_path == file_path:
+            return file_path.name
 
         s = ''
-        for item in path2.parts[len(path1.parts) - 1::]:
+        for item in file_path.parts[len(folder_path.parts) - 1::]:
             s += '/' + item
         return s
 

@@ -14,13 +14,16 @@ class Decompressor:
             return -1
         archive_bytes = archive.read_bytes()
         files = self.decoder.decode(archive_bytes)
-        print(len(files))
-        dirs = []
+        broken_files = []
         for file in files:
-            file_path = Path(target_dir+'/'+file[1])
-            parents=file_path.parents
-            for i in range(len(parents)-1,-1,-1):
+            if file.data is None:
+                broken_files.append(file.path)
+                continue
+
+            file_path = Path(target_dir + '\\' + file.path)
+            parents = file_path.parents
+            for i in range(len(parents) - 1, -1, -1):
                 if not parents[i].exists():
                     parents[i].mkdir()
-            file_path.write_bytes(file[0])
-        return 0
+            file_path.write_bytes(file.data)
+        return broken_files
