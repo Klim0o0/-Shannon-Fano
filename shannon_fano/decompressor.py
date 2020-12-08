@@ -11,7 +11,7 @@ class Decompressor:
     def decompress(self, archive_path: str, target_dir: str):
         archive = Path(archive_path)
         if not archive.exists():
-            return -1
+            return ['archive not exist']
         archive_bytes = archive.read_bytes()
         files = self.decoder.decode(archive_bytes)
         broken_files = []
