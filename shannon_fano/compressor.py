@@ -1,6 +1,6 @@
 import queue
 from pathlib import Path
-from typing import List, Set
+from typing import List
 
 from shannon_fano.encoder import Encoder
 
@@ -25,17 +25,20 @@ class Compressor:
                                                                file_path)))
 
         archive_path = Path(archive_name)
-        archive_path.write_bytes(encoded_data)
+        if len(encoded_data) != 0:
+            archive_path.write_bytes(encoded_data)
+            return 'done'
+        return 'empty_files'
 
     @classmethod
     def get_relative_path(cls, folder_path: Path, file_path: Path) -> str:
         if folder_path == file_path:
             return file_path.name
 
-        s = ''
+        relative_path: List[str] = []
         for item in file_path.parts[len(folder_path.parts) - 1::]:
-            s += '/' + item
-        return s
+            relative_path.append('/' + item)
+        return ''.join(relative_path)
 
     @classmethod
     def collect_files(cls, target: Path) -> List[Path]:

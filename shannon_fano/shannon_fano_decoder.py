@@ -17,6 +17,7 @@ class ShannonFanoDecoder(Decoder):
             data = cls.get_data(archive_data, index)
             index = data[1] + 1
             data_list.append(data[0])
+
         for i in range(0, len(data_list), 4):
             file_path = cls.get_file_path(data_list[i])
             encoding_dictionary = cls.get_encoding_dictionary(data_list[i + 1])
@@ -33,10 +34,10 @@ class ShannonFanoDecoder(Decoder):
 
     @classmethod
     def get_file_path(cls, file_path_data: bytes):
-        file_path: str = ''
+        file_path: List[str] = []
         for i in file_path_data:
-            file_path += chr(i)
-        return file_path
+            file_path.append(chr(i))
+        return ''.join(file_path)
 
     @classmethod
     def decode_file_data(cls, encoding_dictionary: Dict[int, bitarray],
@@ -44,33 +45,28 @@ class ShannonFanoDecoder(Decoder):
         empty_bits_count = file_data[-1]
         bit_file_data = bitarray()
         bit_file_data.frombytes(file_data[0:len(file_data) - 1:])
-        decoding_dictionary = {}
-        decode_file_data = bytearray()
-        for i in encoding_dictionary:
-            decoding_dictionary[encoding_dictionary[i].to01()] = i
-        temp = ''
-        for bit in bit_file_data[0:len(bit_file_data) - empty_bits_count]:
-            temp += '1' if bit else '0'
-            if temp in decoding_dictionary.keys():
-                decode_file_data.append(decoding_dictionary[temp])
-                temp = ''
-        return decode_file_data
+        return bytes(
+            bit_file_data[0:len(bit_file_data) - empty_bits_count].decode(
+                encoding_dictionary))
 
     @classmethod
     def get_encoding_dictionary(cls, encoding_dictionary_data: bytes):
         encoding_dictionary_bits = bitarray()
         encoding_dictionary_bits.frombytes(encoding_dictionary_data)
         index = 0
+        bit = 8
         encoding_dictionary: Dict[int, bitarray] = {}
 
-        while len(encoding_dictionary_bits) - index > 7:
-            symbol: bitarray = encoding_dictionary_bits[index:index + 8:]
+        while len(encoding_dictionary_bits) - index > bit:
+            symbol: bitarray = encoding_dictionary_bits[index:index + bit:]
             code_len_bits: bitarray = \
-                encoding_dictionary_bits[index + 8:index + 16:]
+                encoding_dictionary_bits[index + bit:index + 2 * bit:]
             code_len = int(code_len_bits.to01(), 2)
-            code = encoding_dictionary_bits[index + 16:index + 16 + code_len:]
+            code = encoding_dictionary_bits[
+                   index + 2 * bit:index + 2 * bit + code_len:]
+
             encoding_dictionary[int(symbol.to01(), 2)] = code
-            index += 16 + code_len
+            index += 2 * bit + code_len
         return encoding_dictionary
 
     @classmethod

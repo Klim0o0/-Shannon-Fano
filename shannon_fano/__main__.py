@@ -1,9 +1,4 @@
 import argparse
-from hashlib import md5
-from pathlib import Path
-
-from bitarray import bitarray
-
 from shannon_fano.decompressor import Decompressor
 from shannon_fano.shannon_fano_encoder import ShannonFanoEncoder
 from shannon_fano.shannon_fano_decoder import ShannonFanoDecoder
