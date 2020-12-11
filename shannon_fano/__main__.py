@@ -1,8 +1,13 @@
 import argparse
+import logging
+
 from shannon_fano.decompressor import Decompressor
 from shannon_fano.shannon_fano_encoder import ShannonFanoEncoder
 from shannon_fano.shannon_fano_decoder import ShannonFanoDecoder
 from shannon_fano.compressor import Compressor
+from shannon_fano.errors import DecompressorArchiveNotExistError, \
+    CompressorEmptyFilesError, DecompressorBrokenArchiveError, \
+    CompressorFileNotExistError
 
 
 def parser_arguments():
@@ -33,7 +38,21 @@ def parser_arguments():
     parser_append_compile.set_defaults(function=decompress)
 
     args = parser.parse_args()
-    args.function(args)
+    if 'function' not in args:
+        print('select compress/decompress')
+        return
+    try:
+        args.function(args)
+    except KeyboardInterrupt:
+        print('Interrupt compress')
+    except CompressorEmptyFilesError as e:
+        print(e.message)
+    except CompressorFileNotExistError as e:
+        print(e.message)
+    except DecompressorArchiveNotExistError as e:
+        print(e.message)
+    except DecompressorBrokenArchiveError as e:
+        print(e.message + '\nBroken files: ' + str(e.broken_files))
 
 
 def compress(args):
@@ -43,12 +62,7 @@ def compress(args):
 
 def decompress(args):
     decompressor = Decompressor(ShannonFanoDecoder())
-    broken_files = decompressor.decompress(args.archive, args.target_folder)
-    if len(broken_files) != 0:
-        print('Archive have broken files')
-        print(broken_files)
-    else:
-        print('Decompress done')
+    decompressor.decompress(args.archive, args.target_folder)
 
 
 if __name__ == '__main__':

@@ -3,6 +3,8 @@ from pathlib import Path
 from typing import List
 
 from shannon_fano.encoder import Encoder
+from shannon_fano.errors import CompressorEmptyFilesError, \
+    CompressorFileNotExistError
 
 
 class Compressor:
@@ -10,12 +12,18 @@ class Compressor:
         self.encoder: Encoder = encoder
 
     def compress(self, targets: List[str], archive_name: str):
+
+        if archive_name is None:
+            archive_name = str(Path.cwd().joinpath(Path.cwd().name))
         archive_name += '.sf'
         encoded_data = bytearray()
-        targets_paths: List[Path] = []
 
+        targets_paths: List[Path] = []
         for target in targets:
-            targets_paths.append(Path(target))
+            target_path = Path(target)
+            if not target_path.exists():
+                raise CompressorFileNotExistError()
+            targets_paths.append(target_path)
 
         for target_path in targets_paths:
             for file_path in self.collect_files(target_path):
@@ -28,7 +36,7 @@ class Compressor:
         if len(encoded_data) != 0:
             archive_path.write_bytes(encoded_data)
             return 'done'
-        return 'empty_files'
+        raise CompressorEmptyFilesError()
 
     @classmethod
     def get_relative_path(cls, folder_path: Path, file_path: Path) -> str:
