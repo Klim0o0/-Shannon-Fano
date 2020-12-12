@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from shannon_fano.decoder import Decoder
+from shannon_fano.encoder_decoder import Decoder
 from shannon_fano.errors import DecompressorBrokenArchiveError, \
     DecompressorArchiveNotExistError
 
@@ -14,19 +14,8 @@ class Decompressor:
         archive = Path(archive_path)
         if not archive.exists():
             raise DecompressorArchiveNotExistError()
-        archive_bytes = archive.read_bytes()
-        files = self.decoder.decode(archive_bytes)
         broken_files = []
-        for file in files:
-            if file.data is None:
-                broken_files.append(file.path)
-                continue
-
-            file_path = Path(target_dir + '\\' + file.path)
-            parents = file_path.parents
-            for i in range(len(parents) - 1, -1, -1):
-                if not parents[i].exists():
-                    parents[i].mkdir()
-            file_path.write_bytes(file.data)
+        with archive.open('rb') as archive_file:
+            broken_files = self.decoder.decode(archive_file, Path(target_dir))
         if len(broken_files) != 0:
             raise DecompressorBrokenArchiveError(broken_files)

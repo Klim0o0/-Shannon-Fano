@@ -1,10 +1,10 @@
+import os
 import queue
 from pathlib import Path
 from typing import List
 
-from shannon_fano.encoder import Encoder
-from shannon_fano.errors import CompressorEmptyFilesError, \
-    CompressorFileNotExistError
+from shannon_fano.encoder_decoder import Encoder
+from shannon_fano.errors import CompressorFileNotExistError
 
 
 class Compressor:
@@ -16,27 +16,25 @@ class Compressor:
         if archive_name is None:
             archive_name = str(Path.cwd().joinpath(Path.cwd().name))
         archive_name += '.sf'
-        encoded_data = bytearray()
-
-        targets_paths: List[Path] = []
-        for target in targets:
-            target_path = Path(target)
-            if not target_path.exists():
-                raise CompressorFileNotExistError()
-            targets_paths.append(target_path)
-
-        for target_path in targets_paths:
-            for file_path in self.collect_files(target_path):
-                encoded_data.extend(
-                    self.encoder.encode(file_path.read_bytes(),
-                                        self.get_relative_path(target_path,
-                                                               file_path)))
-
         archive_path = Path(archive_name)
-        if len(encoded_data) != 0:
-            archive_path.write_bytes(encoded_data)
-            return 'done'
-        raise CompressorEmptyFilesError()
+
+        with archive_path.open('wb') as archive_file:
+            targets_paths: List[Path] = []
+            for target in targets:
+                target_path = Path(target)
+                if not target_path.exists():
+                    raise CompressorFileNotExistError()
+                targets_paths.append(target_path)
+
+            for target_path in targets_paths:
+                for file_path in self.collect_files(target_path):
+                    with file_path.open('rb') as file:
+                        self.encoder.encode(file, archive_file,
+                                            self.get_relative_path(
+                                                target_path,
+                                                file_path))
+
+        return True
 
     @classmethod
     def get_relative_path(cls, folder_path: Path, file_path: Path) -> str:
@@ -50,16 +48,10 @@ class Compressor:
 
     @classmethod
     def collect_files(cls, target: Path) -> List[Path]:
-        files: List[Path] = []
-        dirs: queue.Queue[Path] = queue.Queue()
-        dirs.put(target)
 
-        while not dirs.empty():
-            directory = dirs.get()
-            if directory.is_dir():
-                for sub_dir in directory.glob('*'):
-                    dirs.put(sub_dir)
-            else:
-                files.append(directory)
+        if target.is_file():
+            return [target]
 
-        return files
+        for address, dirs, files in os.walk(str(target)):
+            for file in files:
+                yield Path(address + '/' + file)
