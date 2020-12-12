@@ -164,41 +164,25 @@ class ShannonFanoEncoder(Encoder):
     def _write_encoded_file_data(cls, file: BufferedReader,
                                  archive_file: BufferedWriter,
                                  encoding_dictionary):
-        temp_archive_file_path = Path('temp_archive_file')
-        bit_buffer: bitarray = bitarray()
-        with temp_archive_file_path.open('wb') as temp_archive_file:
-            while True:
-                byte = file.read(1)
-                if not byte:
-                    break
-                bit_buffer.extend(encoding_dictionary[byte[0]])
-                while len(bit_buffer) >= 8:
-                    if len(bit_buffer) > 8:
-                        temp_archive_file.write(bit_buffer[:8:].tobytes())
-                        bit_buffer = bit_buffer[8::]
-                    else:
-                        temp_archive_file.write(bit_buffer.tobytes())
-                        bit_buffer.clear()
+        bit_buffer = bitarray()
+        while True:
+            byte = file.read(1)
+            if not byte:
+                break
+            bit_buffer.extend(encoding_dictionary[byte[0]])
+            while bit_buffer >= 255 * 8:
+                archive_file.write(bytes([255]))
+                archive_file.write(bit_buffer[:255 * 8:].tobytes())
+                bit_buffer = bit_buffer[255 * 8::]
 
-            empty_bits_count = 8 - len(bit_buffer)
+        if len(bit_buffer) != 0:
+            empty_bits_count = 8 - len(bit_buffer) % 8
             if empty_bits_count == 8:
                 empty_bits_count = 0
+            archive_file.write(bytes([len(bit_buffer)]))
+            archive_file.write(bit_buffer.tobytes())
+            archive_file.write(bytes([empty_bits_count, 0]))
 
-            if len(bit_buffer) != 0:
-                temp_archive_file.write(bit_buffer.tobytes())
-
-            temp_archive_file.write(bytes([empty_bits_count]))
-
-        with temp_archive_file_path.open('rb') as temp_archive_file:
-            while True:
-                archive_bytes = temp_archive_file.read(255)
-                if not archive_bytes:
-                    archive_file.write(bytes([0]))
-                    break
-                archive_file.write(bytes([len(archive_bytes)]))
-                archive_file.write(archive_bytes)
-
-        temp_archive_file_path.unlink()
         file.seek(0, 0)
 
     @classmethod
