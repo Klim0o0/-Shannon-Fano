@@ -2,58 +2,97 @@ import collections
 from hashlib import md5
 from io import BufferedReader, BufferedWriter
 from pathlib import Path
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Set
 from bitarray import bitarray
+from abc import ABC, abstractmethod
 
-from shannon_fano.file import File
 
-
-class Decoder:
+class Decoder(ABC):
 
     @classmethod
-    def decode(cls, archive_file, target_foldr: Path) -> \
-            List[File]:
+    @abstractmethod
+    def decode(cls, archive_file,
+               target_foldr: Path,
+               files: Set[str],
+               ignore_broken_files: bool):
+        pass
+
+    @classmethod
+    @abstractmethod
+    def get_file_names(cls, archive_file):
         pass
 
 
-class Encoder:
+class Encoder(ABC):
 
     @classmethod
-    def encode(cls, file, archive_file, file_path: str) -> bytes:
+    @abstractmethod
+    def encode(cls, file, archive_file, file_path: str):
         pass
 
 
 class ShannonFanoDecoder(Decoder):
 
     @classmethod
-    def decode(cls, archive_file: BufferedReader, target_foldr: Path):
+    def decode(cls,
+               archive_file: BufferedReader,
+               target_foldr: Path,
+               files_for_decompress: Set[str],
+               not_ignore_broken_files: bool):
         broken_files = []
         while True:
             file_path_data = cls._get_data(archive_file)
             if not file_path_data:
                 break
-            file_path = target_foldr / cls.get_file_path(file_path_data)
+            local_file_path = cls.get_file_path(file_path_data)
+            if len(files_for_decompress) != 0 \
+                    and local_file_path not in files_for_decompress:
+                cls._move_to_next_file(archive_file)
+                continue
 
-            if not target_foldr.exists():
-                target_foldr.mkdir(parents=True)
+            current_file_path = target_foldr / local_file_path
+
+            if not current_file_path.parent.exists():
+                current_file_path.parent.mkdir(parents=True)
 
             decoding_dictionary = cls.get_decoding_dictionary(
                 cls._get_data(archive_file))
 
             control_sum = cls._get_data(archive_file)
 
-            if (cls.decode_and_write_file(archive_file, Path(file_path),
-                                          control_sum,
-                                          decoding_dictionary)):
-                broken_files.append(file_path)
+            if control_sum \
+                    != cls.decode_and_write_file(archive_file,
+                                                 Path(current_file_path),
+                                                 decoding_dictionary) \
+                    and not_ignore_broken_files:
+                current_file_path.unlink()
+                broken_files.append(current_file_path)
         return broken_files
 
     @classmethod
-    def decode_and_write_file(cls, archive_file: BufferedReader,
+    def get_file_names(cls, archive_file: BufferedReader):
+        while True:
+            file_path_data = cls._get_data(archive_file)
+            if not file_path_data:
+                break
+            yield cls.get_file_path(file_path_data)
+            cls._move_to_next_file(archive_file)
+
+    @classmethod
+    def _move_to_next_file(cls, archive_file: BufferedReader):
+        for i in range(3):
+            byte = archive_file.read(1)
+            while byte[0] != 0:
+                archive_file.seek(byte[0], 1)
+                byte = archive_file.read(1)
+
+    @classmethod
+    def decode_and_write_file(cls,
+                              archive_file: BufferedReader,
                               file_path: Path,
-                              control_sum: bytes,
-                              decoding_dictionary: Dict[Tuple[bool], bytes]):
-        current_control_sum = md5()
+                              decoding_dictionary: Dict[Tuple[bool], bytes]) \
+            -> bytes:
+        decoded_control_sum = md5()
 
         with file_path.open('wb') as file:
             bit_buffer = bitarray()
@@ -77,12 +116,12 @@ class ShannonFanoDecoder(Decoder):
                     temp_bits_tuple = tuple(temp_bits)
                     if temp_bits_tuple in decoding_dictionary.keys():
                         file.write(decoding_dictionary[temp_bits_tuple])
-                        current_control_sum.update(
+                        decoded_control_sum.update(
                             decoding_dictionary[temp_bits_tuple])
                         temp_bits.clear()
                 bit_buffer = temp_bits
 
-        return current_control_sum.digest() == control_sum
+        return decoded_control_sum.digest()
 
     @classmethod
     def _get_data(cls, archive_file: BufferedReader) -> bytes:
@@ -157,7 +196,7 @@ class ShannonFanoEncoder(Encoder):
             if not byte:
                 break
             sum.update(byte)
-        file.seek(0, 0)
+        file.seek(0)
         return sum.digest()
 
     @classmethod
@@ -170,7 +209,7 @@ class ShannonFanoEncoder(Encoder):
             if not byte:
                 break
             bit_buffer.extend(encoding_dictionary[byte[0]])
-            while bit_buffer >= 255 * 8:
+            while len(bit_buffer) >= 255 * 8:
                 archive_file.write(bytes([255]))
                 archive_file.write(bit_buffer[:255 * 8:].tobytes())
                 bit_buffer = bit_buffer[255 * 8::]
@@ -179,11 +218,11 @@ class ShannonFanoEncoder(Encoder):
             empty_bits_count = 8 - len(bit_buffer) % 8
             if empty_bits_count == 8:
                 empty_bits_count = 0
-            archive_file.write(bytes([len(bit_buffer)]))
-            archive_file.write(bit_buffer.tobytes())
-            archive_file.write(bytes([empty_bits_count, 0]))
+            byte_buffer = bytearray(bit_buffer.tobytes())
+            byte_buffer.append(empty_bits_count)
 
-        file.seek(0, 0)
+            archive_file.write(cls._compose_data(bytes(byte_buffer)))
+        file.seek(0)
 
     @classmethod
     def _get_file_path_data(cls, file_path) -> bytes:
@@ -230,7 +269,7 @@ class ShannonFanoEncoder(Encoder):
             frequency[byte[0]] += 1
             symbols.add(byte[0])
             file_len += 1
-        file.seek(0, 0)
+        file.seek(0)
 
         symbols_list = list(symbols)
 

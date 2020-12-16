@@ -1,15 +1,13 @@
 import os
-import queue
 from pathlib import Path
 from typing import List
 
-from shannon_fano.encoder_decoder import Encoder
 from shannon_fano.errors import CompressorFileNotExistError
 
 
 class Compressor:
-    def __init__(self, encoder: Encoder):
-        self.encoder: Encoder = encoder
+    def __init__(self, encoder):
+        self.encoder = encoder
 
     def compress(self, targets: List[str], archive_name: str):
 
@@ -30,27 +28,13 @@ class Compressor:
                 for file_path in self.collect_files(target_path):
                     with file_path.open('rb') as file:
                         self.encoder.encode(file, archive_file,
-                                            self.get_relative_path(
-                                                target_path,
-                                                file_path))
-
-        return True
-
-    @classmethod
-    def get_relative_path(cls, folder_path: Path, file_path: Path) -> str:
-        if folder_path == file_path:
-            return file_path.name
-
-        relative_path: List[str] = []
-        for item in file_path.parts[len(folder_path.parts) - 1::]:
-            relative_path.append('/' + item)
-        return ''.join(relative_path)
+                                            str(file_path.relative_to(
+                                                target_path.parent)))
 
     @classmethod
     def collect_files(cls, target: Path) -> List[Path]:
-
         if target.is_file():
-            return [target]
+            yield target
 
         for address, dirs, files in os.walk(str(target)):
             for file in files:

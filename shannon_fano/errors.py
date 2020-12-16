@@ -7,7 +7,7 @@ class CompressorEmptyFilesError(ArchiveError):
 
 
 class CompressorFileNotExistError(ArchiveError):
-    message = 'error: empty files'
+    message = 'error:files not exist'
 
 
 class DecompressorBrokenArchiveError(ArchiveError):

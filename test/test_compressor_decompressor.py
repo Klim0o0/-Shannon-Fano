@@ -3,8 +3,8 @@ from pathlib import Path
 
 from shannon_fano.compressor import Compressor
 from shannon_fano.decompressor import Decompressor
-from shannon_fano.shannon_fano_decoder import ShannonFanoDecoder
-from shannon_fano.shannon_fano_encoder import ShannonFanoEncoder
+from shannon_fano.encoder_decoder import ShannonFanoDecoder
+from shannon_fano.encoder_decoder import ShannonFanoEncoder
 
 
 class CompressorDecompressorTests(unittest.TestCase):
@@ -34,7 +34,9 @@ class CompressorDecompressorTests(unittest.TestCase):
 
     def test_compress_decompress(self):
         self.compressor.compress(['./folder_to_compress'], 'archive')
-        self.decompressor.decompress('./archive.sf', './decompressed')
+        self.decompressor.decompress('./archive.sf', './decompressed',
+                                     [],
+                                     True)
 
         self.assertTrue(self.parent_folder.exists())
         self.assertTrue(self.sub_folder.exists())
@@ -47,16 +49,40 @@ class CompressorDecompressorTests(unittest.TestCase):
         self.assertEqual(self.original_file2.read_bytes(),
                          self.file2.read_bytes())
 
-        Path('./archive.sf').unlink()
-        self.file1.unlink()
-        self.file2.unlink()
-        self.original_file1.unlink()
-        self.original_file2.unlink()
-        self.sub_folder.rmdir()
-        self.parent_folder.rmdir()
-        Path('./folder_to_compress/sub_folder').rmdir()
-        Path('./folder_to_compress/').rmdir()
-        Path('./decompressed').rmdir()
+    def test_compress_decompress_some_files(self):
+        self.compressor.compress(['./folder_to_compress'], 'archive')
+        self.decompressor.decompress('./archive.sf', './decompressed', [
+            'folder_to_compress\\' + self.original_file1.name], True)
+
+        self.assertTrue(self.parent_folder.exists())
+        self.assertFalse(self.sub_folder.exists())
+        self.assertTrue(self.original_file1.exists())
+        self.assertTrue(self.original_file2.exists())
+        self.assertTrue(self.file1.exists())
+        self.assertFalse(self.file2.exists())
+        self.assertEqual(self.original_file1.read_bytes(),
+                         self.file1.read_bytes())
+
+    def tearDown(self):
+        self.remove_if_exist(Path('./archive.sf'))
+        self.remove_if_exist(self.file1)
+        self.remove_if_exist(self.file2)
+        self.remove_if_exist(self.original_file1)
+        self.remove_if_exist(self.original_file2)
+        self.remove_if_exist(self.sub_folder)
+        self.remove_if_exist(self.parent_folder)
+        self.remove_if_exist(Path('./folder_to_compress/sub_folder'))
+        self.remove_if_exist(Path('./folder_to_compress/'))
+        self.remove_if_exist(Path('./decompressed'))
+
+    @staticmethod
+    def remove_if_exist(path: Path):
+        if not path.exists():
+            return
+        if path.is_file():
+            path.unlink()
+        else:
+            path.rmdir()
 
 
 if __name__ == '__main__':
