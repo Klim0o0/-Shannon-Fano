@@ -229,7 +229,7 @@ class ShannonFanoEncoder(Encoder):
         return cls._compose_data(bytes(file_path, 'utf-8'))
 
     @classmethod
-    def _compose_data(cls, data: bytes):
+    def _compose_data(cls, data: bytes) -> bytes:
         composed_data = bytearray()
         data_unit = bytearray()
         for byte in data:
