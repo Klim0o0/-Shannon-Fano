@@ -38,8 +38,9 @@ class ShannonFanoDecoder(Decoder):
                archive_file: BufferedReader,
                target_foldr: Path,
                files_for_decompress: Set[str],
-               not_ignore_broken_files: bool):
-        broken_files = []
+               not_ignore_broken_files: bool) \
+            -> List[Path]:
+        broken_files: List[Path] = []
         while True:
             file_path_data = cls._get_data(archive_file)
             if not file_path_data:
@@ -137,7 +138,7 @@ class ShannonFanoDecoder(Decoder):
         return bytes(data)
 
     @classmethod
-    def get_file_path(cls, file_path_data: bytes):
+    def get_file_path(cls, file_path_data: bytes) -> str:
         file_path: List[str] = []
         for i in file_path_data:
             file_path.append(chr(i))
@@ -246,7 +247,8 @@ class ShannonFanoEncoder(Encoder):
         return composed_data
 
     @classmethod
-    def _get_dictionary_data(cls, encoding_dictionary: [int, bitarray]):
+    def _get_dictionary_data(cls,
+                             encoding_dictionary: [int, bitarray]) -> bytes:
         encoding_dictionary_data: bitarray = bitarray()
 
         for key in encoding_dictionary.keys():
