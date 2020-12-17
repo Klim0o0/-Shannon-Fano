@@ -21,7 +21,8 @@ def parser_arguments():
                                        nargs='?')
     parser_append_compile.add_argument('files',
                                        help='List of files you'
-                                            ' want to compress',
+                                            ' want to compress,'
+                                            'if more than 1 need archivename',
                                        nargs='+')
 
     parser_append_compile = subparsers.add_parser('decompress',
@@ -53,7 +54,7 @@ def parser_arguments():
 
 def get_file_names(args):
     decompressor = Decompressor(ShannonFanoDecoder())
-    decompressor.get_file_names(args.archive)
+    print(decompressor.get_file_names(args.archive))
 
 
 def compress(args):

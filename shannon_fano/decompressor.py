@@ -26,6 +26,8 @@ class Decompressor:
             raise DecompressorBrokenArchiveError(broken_files)
 
     def get_file_names(self, archive_path: str):
-        with open(archive_path, 'rb') as archive_file:
+        with Path(archive_path).open('rb') as archive_file:
+            paths: List[str] = []
             for path in self.decoder.get_file_names(archive_file):
-                print(path)
+                paths.append(path + '\n')
+        return ''.join(paths)

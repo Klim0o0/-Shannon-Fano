@@ -12,18 +12,18 @@ class Compressor:
     def compress(self, targets: List[str], archive_name: str):
 
         if archive_name is None:
-            archive_name = str(Path.cwd().joinpath(Path.cwd().name))
+            archive_name = Path(targets[0]).stem
         archive_name += '.sf'
         archive_path = Path(archive_name)
 
-        with archive_path.open('wb') as archive_file:
-            targets_paths: List[Path] = []
-            for target in targets:
-                target_path = Path(target)
-                if not target_path.exists():
-                    raise CompressorFileNotExistError()
-                targets_paths.append(target_path)
+        targets_paths: List[Path] = []
+        for target in targets:
+            target_path = Path(target)
+            if not target_path.exists():
+                raise CompressorFileNotExistError()
+            targets_paths.append(target_path)
 
+        with archive_path.open('wb') as archive_file:
             for target_path in targets_paths:
                 for file_path in self.collect_files(target_path):
                     with file_path.open('rb') as file:
@@ -38,4 +38,4 @@ class Compressor:
 
         for address, dirs, files in os.walk(str(target)):
             for file in files:
-                yield Path(address + '/' + file)
+                yield Path(address) / file

@@ -11,7 +11,8 @@ class Decoder(ABC):
 
     @classmethod
     @abstractmethod
-    def decode(cls, archive_file,
+    def decode(cls,
+               archive_file,
                target_foldr: Path,
                files: Set[str],
                ignore_broken_files: bool):
@@ -32,7 +33,6 @@ class Encoder(ABC):
 
 
 class ShannonFanoDecoder(Decoder):
-
     @classmethod
     def decode(cls,
                archive_file: BufferedReader,
@@ -168,9 +168,12 @@ class ShannonFanoDecoder(Decoder):
 
 
 class ShannonFanoEncoder(Encoder):
+    data_unit_size = 255
+    bit = 8
 
     @classmethod
-    def encode(cls, file: BufferedReader, archive_file: BufferedWriter,
+    def encode(cls, file: BufferedReader,
+               archive_file: BufferedWriter,
                file_path: str):
         encoding_dictionary = cls.get_encoding_dictionary(file)
         cls._encode(file, archive_file, file_path,
@@ -210,20 +213,20 @@ class ShannonFanoEncoder(Encoder):
             if not byte:
                 break
             bit_buffer.extend(encoding_dictionary[byte[0]])
-            while len(bit_buffer) >= 255 * 8:
-                archive_file.write(bytes([255]))
-                archive_file.write(bit_buffer[:255 * 8:].tobytes())
-                bit_buffer = bit_buffer[255 * 8::]
+            while len(bit_buffer) >= cls.data_unit_size * cls.bit:
+                archive_file.write(bytes([cls.data_unit_size]))
+                archive_file.write(
+                    bit_buffer[: cls.data_unit_size * cls.bit:].tobytes())
+                bit_buffer = bit_buffer[cls.data_unit_size * cls.bit::]
 
         if len(bit_buffer) != 0:
-            empty_bits_count = 8 - len(bit_buffer) % 8
-            if empty_bits_count == 8:
+            empty_bits_count = cls.bit - len(bit_buffer) % cls.bit
+            if empty_bits_count == cls.bit:
                 empty_bits_count = 0
             byte_buffer = bytearray(bit_buffer.tobytes())
             byte_buffer.append(empty_bits_count)
 
             archive_file.write(cls._compose_data(bytes(byte_buffer)))
-        file.seek(0)
 
     @classmethod
     def _get_file_path_data(cls, file_path) -> bytes:
@@ -235,8 +238,8 @@ class ShannonFanoEncoder(Encoder):
         data_unit = bytearray()
         for byte in data:
             data_unit.append(byte)
-            if len(data_unit) == 255:
-                composed_data.append(255)
+            if len(data_unit) == cls.data_unit_size:
+                composed_data.append(cls.data_unit_size)
                 composed_data.extend(data_unit)
                 data_unit.clear()
 
