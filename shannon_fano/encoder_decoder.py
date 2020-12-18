@@ -169,7 +169,7 @@ class ShannonFanoDecoder(Decoder):
 
 class ShannonFanoEncoder(Encoder):
     data_unit_size = 255
-    bit = 8
+    byte = 8
 
     @classmethod
     def encode(cls, file: BufferedReader,
@@ -213,15 +213,15 @@ class ShannonFanoEncoder(Encoder):
             if not byte:
                 break
             bit_buffer.extend(encoding_dictionary[byte[0]])
-            while len(bit_buffer) >= cls.data_unit_size * cls.bit:
+            while len(bit_buffer) >= cls.data_unit_size * cls.byte:
                 archive_file.write(bytes([cls.data_unit_size]))
                 archive_file.write(
-                    bit_buffer[: cls.data_unit_size * cls.bit:].tobytes())
-                bit_buffer = bit_buffer[cls.data_unit_size * cls.bit::]
+                    bit_buffer[: cls.data_unit_size * cls.byte:].tobytes())
+                bit_buffer = bit_buffer[cls.data_unit_size * cls.byte::]
 
         if len(bit_buffer) != 0:
-            empty_bits_count = cls.bit - len(bit_buffer) % cls.bit
-            if empty_bits_count == cls.bit:
+            empty_bits_count = cls.byte - len(bit_buffer) % cls.byte
+            if empty_bits_count == cls.byte:
                 empty_bits_count = 0
             byte_buffer = bytearray(bit_buffer.tobytes())
             byte_buffer.append(empty_bits_count)

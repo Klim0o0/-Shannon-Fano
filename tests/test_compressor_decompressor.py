@@ -21,16 +21,15 @@ class CompressorDecompressorTests(unittest.TestCase):
         self.file2 = Path(
             './decompressed/folder_to_compress/sub_folder/f2.txt')
 
-        self.create_folders(self.original_file1)
-        self.create_folders(self.original_file2)
+        self.create_folders_for_file(self.original_file1)
+        self.create_folders_for_file(self.original_file2)
         self.original_file1.write_bytes(bytes(range(256)))
         self.original_file2.write_bytes(bytes(range(256)))
 
-    def create_folders(self, path: Path):
-        parents = path.parents
-        for i in range(len(parents) - 1, -1, -1):
-            if not parents[i].exists():
-                parents[i].mkdir()
+    @staticmethod
+    def create_folders_for_file(path: Path):
+        if not path.parent.exists():
+            path.parent.mkdir(parents=True)
 
     def test_compress_decompress(self):
         self.compressor.compress(['./folder_to_compress'], 'archive')
@@ -69,8 +68,8 @@ class CompressorDecompressorTests(unittest.TestCase):
         self.assertEqual(self.decompressor.get_file_names('./archive.sf'),
                          str(Path('folder_to_compress/f1.txt'))
                          + '\n'
-                         + str(Path(
-                             'folder_to_compress/sub_folder/f2.txt')) + '\n')
+                         + str(Path('folder_to_compress/sub_folder/f2.txt'))
+                         + '\n')
 
     def tearDown(self):
         self.remove_if_exist(Path('./archive.sf'))
