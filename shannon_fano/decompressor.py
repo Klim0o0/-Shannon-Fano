@@ -1,8 +1,9 @@
+from hashlib import md5
 from pathlib import Path
 from typing import List
 
 from shannon_fano.errors import DecompressorBrokenArchiveError, \
-    DecompressorArchiveNotExistError
+    DecompressorArchiveNotExistError, IsNotArchiveError
 
 
 class Decompressor:
@@ -14,11 +15,17 @@ class Decompressor:
                    target_dir: str,
                    files_for_decompress: List[str],
                    not_ignore_broken_files: bool):
+
         archive = Path(archive_path)
         if not archive.exists():
             raise DecompressorArchiveNotExistError()
         with archive.open('rb') as archive_file:
-            broken_files = self.decoder.decode(archive_file,
+            head = archive_file.read(16)
+            archive_file.seek(-16, 2)
+            tail = archive_file.read(16)
+            if md5(head).digest() != tail:
+                raise IsNotArchiveError()
+            broken_files = self.decoder.decode(archive_file_size,archive_file,
                                                Path(target_dir),
                                                set(files_for_decompress),
                                                not_ignore_broken_files)

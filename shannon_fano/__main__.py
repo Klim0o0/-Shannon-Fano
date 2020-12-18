@@ -78,7 +78,3 @@ if __name__ == '__main__':
         print('Interrupt compress')
     except ArchiveError as e:
         print(e.message)
-    except OSError:
-        print('File error')
-    except Exception:
-        print('Some wrong')

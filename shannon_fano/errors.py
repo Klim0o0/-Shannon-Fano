@@ -2,6 +2,10 @@ class ArchiveError(Exception):
     message: str
 
 
+class IsNotArchiveError(ArchiveError):
+    message = 'error: is not archive'
+
+
 class CompressorEmptyFilesError(ArchiveError):
     message = 'error: empty files'
 

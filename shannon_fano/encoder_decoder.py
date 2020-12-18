@@ -1,4 +1,5 @@
 import collections
+import os
 from hashlib import md5
 from io import BufferedReader, BufferedWriter
 from pathlib import Path
@@ -11,7 +12,7 @@ class Decoder(ABC):
 
     @classmethod
     @abstractmethod
-    def decode(cls,
+    def decode(cls, archive_file_size: int,
                archive_file,
                target_foldr: Path,
                files: Set[str],
@@ -34,7 +35,7 @@ class Encoder(ABC):
 
 class ShannonFanoDecoder(Decoder):
     @classmethod
-    def decode(cls,
+    def decode(cls, archive_file_size: int,
                archive_file: BufferedReader,
                target_foldr: Path,
                files_for_decompress: Set[str],
@@ -42,6 +43,8 @@ class ShannonFanoDecoder(Decoder):
             -> List[Path]:
         broken_files: List[Path] = []
         while True:
+            if archive_file.tell() + 16 == archive_file:
+                break
             file_path_data = cls._get_data(archive_file)
             if not file_path_data:
                 break
@@ -56,8 +59,11 @@ class ShannonFanoDecoder(Decoder):
             if not current_file_path.parent.exists():
                 current_file_path.parent.mkdir(parents=True)
 
-            decoding_dictionary = cls.get_decoding_dictionary(
-                cls._get_data(archive_file))
+            dictionary_data = cls._get_data(archive_file)
+            if len(dictionary_data) == 0:
+                current_file_path.write_bytes(bytes([]))
+                continue
+            decoding_dictionary = cls.get_decoding_dictionary(dictionary_data)
 
             control_sum = cls._get_data(archive_file)
 
@@ -83,6 +89,10 @@ class ShannonFanoDecoder(Decoder):
     def _move_to_next_file(cls, archive_file: BufferedReader):
         for i in range(3):
             byte = archive_file.read(1)
+            if not byte:
+                break
+            if byte[0] == 0:
+                break
             while byte[0] != 0:
                 archive_file.seek(byte[0], 1)
                 byte = archive_file.read(1)
@@ -131,6 +141,9 @@ class ShannonFanoDecoder(Decoder):
         if not byte:
             return byte
 
+        if byte[0] == 0:
+            return bytes()
+
         while byte[0] != 0:
             data.extend(archive_file.read(byte[0]))
             byte = archive_file.read(1)
@@ -175,22 +188,32 @@ class ShannonFanoEncoder(Encoder):
     def encode(cls, file: BufferedReader,
                archive_file: BufferedWriter,
                file_path: str):
-        encoding_dictionary = cls.get_encoding_dictionary(file)
-        cls._encode(file, archive_file, file_path,
-                    encoding_dictionary)
+        file.seek(0, os.SEEK_END)
+        size = file.tell()
+        if size == 0:
+            cls._encode_empty_file(archive_file, file_path)
+        else:
+            file.seek(0)
+            cls._encode(file, archive_file, file_path)
 
     @classmethod
     def _encode(cls,
                 file: BufferedReader,
                 archive_file: BufferedWriter,
-                file_path: str,
-                encoding_dictionary):
+                file_path: str):
 
+        encoding_dictionary = cls.get_encoding_dictionary(file)
         archive_file.write(cls._get_file_path_data(file_path))
         archive_file.write(cls._get_dictionary_data(encoding_dictionary))
         archive_file.write(cls._compose_data(cls._get_control_sum(file)))
 
         cls._write_encoded_file_data(file, archive_file, encoding_dictionary)
+
+    @classmethod
+    def _encode_empty_file(cls, archive_file: BufferedWriter,
+                           file_path: str):
+        archive_file.write(cls._get_file_path_data(file_path))
+        archive_file.write(bytes([0]))
 
     @classmethod
     def _get_control_sum(cls, file: BufferedReader) -> bytes:

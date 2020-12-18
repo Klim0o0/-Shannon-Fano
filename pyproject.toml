@@ -1,3 +1,0 @@
-[tool.coverage.run]
-source = ["shannon_fano"]
-omit = [".venv/", "*/__main__.py"]
