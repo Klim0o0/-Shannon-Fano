@@ -20,21 +20,30 @@ class Decompressor:
         if not archive.exists():
             raise DecompressorArchiveNotExistError()
         with archive.open('rb') as archive_file:
-            head = archive_file.read(16)
-            archive_file.seek(-16, 2)
-            tail = archive_file.read(16)
-            if md5(head).digest() != tail:
-                raise IsNotArchiveError()
-            broken_files = self.decoder.decode(archive_file_size,archive_file,
-                                               Path(target_dir),
-                                               set(files_for_decompress),
-                                               not_ignore_broken_files)
+            broken_files = self.decoder.decode(
+                self._get_file_len(archive_file), archive_file,
+                Path(target_dir),
+                set(files_for_decompress),
+                not_ignore_broken_files)
         if len(broken_files) != 0:
             raise DecompressorBrokenArchiveError(broken_files)
+
+    @staticmethod
+    def _get_file_len(archive_file) -> int:
+        head = archive_file.read(16)
+        archive_file.seek(-16, 2)
+        archive_file_size = archive_file.tell()
+        tail = archive_file.read(16)
+        archive_file.seek(16, 0)
+        if md5(head).digest() != tail:
+            raise IsNotArchiveError()
+        return archive_file_size
 
     def get_file_names(self, archive_path: str):
         with Path(archive_path).open('rb') as archive_file:
             paths: List[str] = []
-            for path in self.decoder.get_file_names(archive_file):
+            for path in self.decoder.get_file_names(
+                    self._get_file_len(archive_file),
+                    archive_file):
                 paths.append(path + '\n')
         return ''.join(paths)

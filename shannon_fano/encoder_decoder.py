@@ -21,7 +21,7 @@ class Decoder(ABC):
 
     @classmethod
     @abstractmethod
-    def get_file_names(cls, archive_file):
+    def get_file_names(cls, archive_file_size, archive_file):
         pass
 
 
@@ -43,7 +43,7 @@ class ShannonFanoDecoder(Decoder):
             -> List[Path]:
         broken_files: List[Path] = []
         while True:
-            if archive_file.tell() + 16 == archive_file:
+            if archive_file.tell() == archive_file_size:
                 break
             file_path_data = cls._get_data(archive_file)
             if not file_path_data:
@@ -77,8 +77,11 @@ class ShannonFanoDecoder(Decoder):
         return broken_files
 
     @classmethod
-    def get_file_names(cls, archive_file: BufferedReader):
+    def get_file_names(cls, archive_file_size, archive_file: BufferedReader):
         while True:
+            if archive_file.tell() == archive_file_size:
+                break
+
             file_path_data = cls._get_data(archive_file)
             if not file_path_data:
                 break
@@ -147,6 +150,8 @@ class ShannonFanoDecoder(Decoder):
         while byte[0] != 0:
             data.extend(archive_file.read(byte[0]))
             byte = archive_file.read(1)
+            if not byte:
+                break
 
         return bytes(data)
 

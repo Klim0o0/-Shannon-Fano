@@ -33,7 +33,7 @@ class CompressorDecompressorTests(unittest.TestCase):
 
     def test_compress_decompress(self):
         self.compressor.compress(['./folder_to_compress'], 'archive')
-        self.decompressor.decompress('./archive.sf', './decompressed',
+        self.decompressor.decompress('./archive', './decompressed',
                                      [],
                                      True)
 
@@ -50,7 +50,7 @@ class CompressorDecompressorTests(unittest.TestCase):
 
     def test_compress_decompress_some_files(self):
         self.compressor.compress(['./folder_to_compress'], 'archive')
-        self.decompressor.decompress('./archive.sf', './decompressed', [
+        self.decompressor.decompress('./archive', './decompressed', [
             str(Path('folder_to_compress') / self.original_file1.name)], True)
 
         self.assertTrue(self.parent_folder.exists())
@@ -65,14 +65,14 @@ class CompressorDecompressorTests(unittest.TestCase):
     def test_get(self):
         self.compressor.compress(['./folder_to_compress'], 'archive')
 
-        self.assertEqual(self.decompressor.get_file_names('./archive.sf'),
+        self.assertEqual(self.decompressor.get_file_names('./archive'),
                          str(Path('folder_to_compress/f1.txt'))
                          + '\n'
                          + str(Path('folder_to_compress/sub_folder/f2.txt'))
                          + '\n')
 
     def tearDown(self):
-        self.remove_if_exist(Path('./archive.sf'))
+        self.remove_if_exist(Path('./archive'))
         self.remove_if_exist(self.file1)
         self.remove_if_exist(self.file2)
         self.remove_if_exist(self.original_file1)
