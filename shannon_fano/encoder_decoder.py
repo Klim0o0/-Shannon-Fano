@@ -7,6 +7,9 @@ from typing import List, Tuple, Dict, Set
 from bitarray import bitarray
 from abc import ABC, abstractmethod
 
+from shannon_fano.errors import CantCreateFile, \
+    CantWriteInArchiveOrCantReadSomeFile
+
 
 class Decoder(ABC):
 
@@ -41,40 +44,44 @@ class ShannonFanoDecoder(Decoder):
                files_for_decompress: Set[str],
                not_ignore_broken_files: bool) \
             -> List[Path]:
-        broken_files: List[Path] = []
-        while True:
-            if archive_file.tell() == archive_file_size:
-                break
-            file_path_data = cls._get_data(archive_file)
-            if not file_path_data:
-                break
-            local_file_path = cls.get_file_path(file_path_data)
-            if len(files_for_decompress) != 0 \
-                    and local_file_path not in files_for_decompress:
-                cls._move_to_next_file(archive_file)
-                continue
+        try:
+            broken_files: List[Path] = []
+            while True:
+                if archive_file.tell() == archive_file_size:
+                    break
+                file_path_data = cls._get_data(archive_file)
+                if not file_path_data:
+                    break
+                local_file_path = cls.get_file_path(file_path_data)
+                if len(files_for_decompress) != 0 \
+                        and local_file_path not in files_for_decompress:
+                    cls._move_to_next_file(archive_file)
+                    continue
 
-            current_file_path = target_foldr / local_file_path
+                current_file_path = target_foldr / local_file_path
 
-            if not current_file_path.parent.exists():
-                current_file_path.parent.mkdir(parents=True)
+                if not current_file_path.parent.exists():
+                    current_file_path.parent.mkdir(parents=True)
 
-            dictionary_data = cls._get_data(archive_file)
-            if len(dictionary_data) == 0:
-                current_file_path.write_bytes(bytes([]))
-                continue
-            decoding_dictionary = cls.get_decoding_dictionary(dictionary_data)
+                dictionary_data = cls._get_data(archive_file)
+                if len(dictionary_data) == 0:
+                    current_file_path.write_bytes(bytes([]))
+                    continue
+                decoding_dictionary = cls.get_decoding_dictionary(
+                    dictionary_data)
 
-            control_sum = cls._get_data(archive_file)
+                control_sum = cls._get_data(archive_file)
 
-            if control_sum \
-                    != cls.decode_and_write_file(archive_file,
-                                                 Path(current_file_path),
-                                                 decoding_dictionary) \
-                    and not_ignore_broken_files:
-                current_file_path.unlink()
-                broken_files.append(current_file_path)
-        return broken_files
+                if control_sum \
+                        != cls.decode_and_write_file(archive_file,
+                                                     Path(current_file_path),
+                                                     decoding_dictionary) \
+                        and not_ignore_broken_files:
+                    current_file_path.unlink()
+                    broken_files.append(current_file_path)
+            return broken_files
+        except OSError:
+            raise CantCreateFile()
 
     @classmethod
     def get_file_names(cls, archive_file_size, archive_file: BufferedReader):
@@ -195,11 +202,14 @@ class ShannonFanoEncoder(Encoder):
                file_path: str):
         file.seek(0, os.SEEK_END)
         size = file.tell()
-        if size == 0:
-            cls._encode_empty_file(archive_file, file_path)
-        else:
-            file.seek(0)
-            cls._encode(file, archive_file, file_path)
+        try:
+            if size == 0:
+                cls._encode_empty_file(archive_file, file_path)
+            else:
+                file.seek(0)
+                cls._encode(file, archive_file, file_path)
+        except OSError:
+            raise CantWriteInArchiveOrCantReadSomeFile()
 
     @classmethod
     def _encode(cls,

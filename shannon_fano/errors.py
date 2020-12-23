@@ -2,6 +2,22 @@ class ArchiveError(Exception):
     message: str
 
 
+class CantCreateArchive(ArchiveError):
+    message = 'can\' create archive'
+
+
+class CantWriteInArchiveOrCantReadSomeFile(ArchiveError):
+    message = 'can\'t write in archive or cant read file'
+
+
+class CantCreateFile(ArchiveError):
+    message = 'can\' create archive'
+
+
+class CantOpenArchive(ArchiveError):
+    message = 'can\' open archive'
+
+
 class IsNotArchiveError(ArchiveError):
     message = 'error: is not archive'
 

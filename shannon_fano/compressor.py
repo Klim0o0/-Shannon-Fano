@@ -4,7 +4,8 @@ from pathlib import Path
 from random import randint
 from typing import List
 
-from shannon_fano.errors import CompressorFileNotExistError
+from shannon_fano.errors import CompressorFileNotExistError, ArchiveError, \
+    CantCreateArchive
 
 
 class Compressor:
@@ -14,7 +15,7 @@ class Compressor:
     def compress(self, targets: List[str], archive_name: str):
 
         if archive_name is None:
-            archive_name = Path(targets[0]).stem
+            archive_name = Path(targets[0]).stem + '.sf'
         archive_path = Path(archive_name)
 
         targets_paths: List[Path] = []
@@ -25,16 +26,20 @@ class Compressor:
             targets_paths.append(target_path)
         head = bytes(randint(0, 255) for i in range(16))
         tail = md5(head).digest()
-
-        with archive_path.open('wb') as archive_file:
-            archive_file.write(head)
-            for target_path in targets_paths:
-                for file_path in self.collect_files(target_path):
-                    with file_path.open('rb') as file:
-                        self.encoder.encode(file, archive_file,
-                                            str(file_path.relative_to(
-                                                target_path.parent)))
-            archive_file.write(tail)
+        try:
+            with archive_path.open('wb') as archive_file:
+                archive_file.write(head)
+                for target_path in targets_paths:
+                    for file_path in self.collect_files(target_path):
+                        with file_path.open('rb') as file:
+                            self.encoder.encode(file, archive_file,
+                                                str(file_path.relative_to(
+                                                    target_path.parent)))
+                archive_file.write(tail)
+        except ArchiveError as e:
+            raise e
+        except OSError:
+            raise CantCreateArchive()
 
     @classmethod
     def collect_files(cls, target: Path) -> List[Path]:
